@@ -1,0 +1,71 @@
+----------------------06-12-2021---------------------
+
+CREATE DATABASE perpus;
+
+CREATE TABLE rak(
+kode_rak VARCHAR(3) NOT NULL,
+lokasi VARCHAR(50) NOT NULL,
+CONSTRAINT rak_kode_rak_PK PRIMARY KEY(kode_rak));
+
+CREATE TABLE buku(
+isbn VARCHAR(15) NOT NULL,
+judul VARCHAR(50) NOT NULL,
+pengarang VARCHAR(50) NOT NULL,
+penerbit VARCHAR(50) NOT NULL,
+stok INT NOT NULL,
+kode_rak VARCHAR(3) NOT NULL,
+CONSTRAINT buku_isbn_PK PRIMARY KEY(isbn),
+CONSTRAINT buku_kode_rak_FK FOREIGN KEY(kode_rak) REFERENCES rak(kode_rak));
+
+CREATE TABLE petugas(
+id_petugas VARCHAR(10) NOT NULL,
+nama VARCHAR(50) NOT NULL,
+no_telp VARCHAR(15) NOT NULL,
+status VARCHAR(15) NOT NULL,
+password VARCHAR(30) NOT NULL,
+CONSTRAINT petugas_id_petugas_PK PRIMARY KEY(id_petugas));
+
+CREATE TABLE anggota(
+id_anggota VARCHAR(5) NOT NULL,
+nama VARCHAR(50) NOT NULL,
+no_telp VARCHAR(15) NOT NULL,
+CONSTRAINT anggota_id_anggota_PK PRIMARY KEY(id_anggota));
+
+CREATE TABLE peminjaman(
+kode_peminjaman serial,
+tanggal_peminjaman DATE NOT NULL,
+tanggal_pengembalian DATE,
+isbn VARCHAR(15) NOT NULL,
+id_petugas VARCHAR(5) NOT NULL,
+id_anggota VARCHAR(5) NOT NULL,
+status VARCHAR(10) NOT NULL,
+CONSTRAINT peminjaman_kode_peminjaman_PK PRIMARY KEY(kode_peminjaman),
+CONSTRAINT peminjaman_isbn_FK FOREIGN KEY(isbn) REFERENCES buku(isbn),
+CONSTRAINT peminjaman_id_petugas_FK FOREIGN KEY(id_petugas) REFERENCES petugas(id_petugas),
+CONSTRAINT peminjaman_id_anggota_FK FOREIGN KEY(id_anggota) REFERENCES anggota(id_anggota));
+
+----------------------11-12-2021---------------------
+CREATE VIEW pinjam AS
+SELECT kode_peminjaman, A.nama AS nama, A.no_telp AS no_telp, judul, pengarang, tanggal_peminjaman, tanggal_pengembalian, P.nama AS nama_petugas
+FROM Peminjaman M, Buku B, Anggota A, Petugas P
+WHERE M.id_anggota=A.id_anggota AND M.id_petugas=P.id_petugas AND M.isbn=B.isbn;
+
+
+----------------------13-12-2021---------------------
+((MySQL))
+CREATE DEFINER=`root`@`localhost` TRIGGER `peminjaman_AFTER_INSERT` AFTER INSERT ON `peminjaman` FOR EACH ROW BEGIN
+IF (NEW.STATUS='belum') THEN
+UPDATE buku SET stok=stok-1
+WHERE buku.isbn=NEW.isbn;
+ELSE
+UPDATE buku SET stok=stok+1
+WHERE buku.isbn=NEW.isbn;
+END IF;
+END
+-----------------------------------------------------
+CREATE DEFINER=`root`@`localhost` TRIGGER `peminjaman_AFTER_UPDATE` AFTER UPDATE ON `peminjaman` FOR EACH ROW BEGIN
+IF (OLD.STATUS='belum' AND NEW.status='sudah') THEN
+UPDATE buku SET stok=stok+1
+WHERE buku.isbn=NEW.isbn;
+END IF;
+END
